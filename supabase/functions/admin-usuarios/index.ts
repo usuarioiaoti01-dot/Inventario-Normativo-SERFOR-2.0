@@ -84,6 +84,25 @@ Deno.serve(async (req) => {
       return json({ ok: true, id: nuevo.user.id, claveTemporal });
     }
 
+    if (accion === "restablecer_clave") {
+      const { id } = body;
+      if (!id) return json({ error: "Falta el id del usuario." }, 400);
+
+      const claveTemporal = generarClaveTemporal();
+      const { error: errPass } = await admin.auth.admin.updateUserById(id, { password: claveTemporal });
+      if (errPass) return json({ error: "No se pudo generar la clave: " + errPass.message }, 400);
+
+      const { error: errPerfil } = await admin
+        .from("profiles")
+        .update({ must_change_password: true })
+        .eq("id", id);
+      if (errPerfil) {
+        return json({ error: "Clave generada, pero no se pudo marcar el cambio obligatorio: " + errPerfil.message }, 500);
+      }
+
+      return json({ ok: true, claveTemporal });
+    }
+
     if (accion === "eliminar") {
       const { id } = body;
       if (!id) return json({ error: "Falta el id del usuario." }, 400);
@@ -95,7 +114,7 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
-    return json({ error: "Acción no reconocida. Use 'crear' o 'eliminar'." }, 400);
+    return json({ error: "Acción no reconocida. Use 'crear', 'restablecer_clave' o 'eliminar'." }, 400);
   } catch (e) {
     return json({ error: String(e) }, 500);
   }

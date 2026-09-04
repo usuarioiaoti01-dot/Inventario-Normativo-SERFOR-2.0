@@ -443,6 +443,17 @@
   };
   const ORDEN = ["Directiva","Reglamento","Ley","Decreto Supremo","Decreto Legislativo","Decreto de Urgencia","TUO","Resolucion","Resolución","Ordenanza","Politica","Estrategia","Plan","Lineamientos","Guia","Manual","Procedimiento","Norma","Otros"];
   const esc = s => (s==null?"":String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  // sb.functions.invoke() solo da un mensaje generico ("non-2xx status code");
+  // el motivo real viene en el cuerpo de la respuesta que queda en error.context.
+  async function detalleError(error){
+    try{
+      if(error?.context && typeof error.context.json === 'function'){
+        const body = await error.context.json();
+        if(body?.error) return body.error;
+      }
+    }catch(_){}
+    return error?.message || 'Error desconocido';
+  }
   const stCls = s => s==="Derogada"?"der":s==="Modificada"?"mod":"vig";
 
   let sb = null, INVENTARIO = [], isAdmin = false, currentUser = null;
@@ -730,7 +741,8 @@
             ${Object.entries(ETIQ_ROL).map(([v,t])=>`<option value="${v}" ${u.role===v?'selected':''}>${t}</option>`).join('')}
           </select>
         </td>
-        <td>
+        <td style="white-space:nowrap">
+          <button class="btn ghost sm" onclick="regenerarClave('${u.id}','${esc(u.email)}')">Generar clave</button>
           <button class="btn danger sm" ${u.id===currentUser.id?'disabled title="No puedes eliminar tu propia cuenta"':''} onclick="eliminarUsuario('${u.id}','${esc(u.email)}')">Eliminar</button>
         </td>
       </tr>`).join('');
@@ -743,10 +755,20 @@
     cargarUsuarios();
   }
 
+  // Genera una nueva contraseña temporal para una cuenta ya existente
+  // (usuario bloqueado, clave olvidada, o si la creación inicial falló a medias).
+  async function regenerarClave(id, email){
+    if(!confirm(`¿Generar una nueva contraseña temporal para ${email}? La actual dejará de funcionar y deberá cambiarla al ingresar.`)) return;
+    const { data, error } = await sb.functions.invoke('admin-usuarios', { body:{ accion:'restablecer_clave', id } });
+    if(error || data?.error){ alert('No se pudo generar la clave: ' + (data?.error || await detalleError(error))); return; }
+    alert(`Nueva contraseña temporal para ${email} (cópiala y entrégala por un canal seguro; no se volverá a mostrar):\n\n${data.claveTemporal}`);
+    cargarUsuarios();
+  }
+
   async function eliminarUsuario(id, email){
     if(!confirm(`¿Eliminar definitivamente la cuenta de ${email}? Esta acción no se puede deshacer.`)) return;
     const { data, error } = await sb.functions.invoke('admin-usuarios', { body:{ accion:'eliminar', id } });
-    if(error || data?.error){ alert('No se pudo eliminar: ' + (data?.error || error.message)); return; }
+    if(error || data?.error){ alert('No se pudo eliminar: ' + (data?.error || await detalleError(error))); return; }
     cargarUsuarios();
   }
 
@@ -763,7 +785,7 @@
     const { data, error } = await sb.functions.invoke('admin-usuarios', { body });
     btn.disabled = false; btn.textContent = 'Crear cuenta';
     if(error || data?.error){
-      msg.innerHTML = `<div class="form-msg err">${esc(data?.error || error.message)}</div>`;
+      msg.innerHTML = `<div class="form-msg err">${esc(data?.error || await detalleError(error))}</div>`;
       return;
     }
     msg.innerHTML = `<div class="form-msg ok">Cuenta creada. Contraseña temporal (cópiala y entrégala por un canal seguro; no se volverá a mostrar):<br><b style="font-size:1rem;letter-spacing:.03em">${esc(data.claveTemporal)}</b></div>`;
