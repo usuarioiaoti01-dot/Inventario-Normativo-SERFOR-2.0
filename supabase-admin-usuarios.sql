@@ -13,6 +13,22 @@
 --  Es idempotente: se puede volver a ejecutar sin efectos secundarios.
 -- ============================================================
 
+-- ---------- 0. Quitar cualquier trigger previo en profiles ----------
+-- (no se toca la funcion por si algun otro objeto la usa; solo se
+--  desconecta de esta tabla, porque este script trae su propio resguardo
+--  en el paso 4. Evita que un trigger anterior, p.ej. uno que valide
+--  cambios de rol contra auth.uid(), aborte los "update" del paso 1
+--  cuando se ejecutan desde el SQL Editor sin sesion de usuario.)
+do $$
+declare r record;
+begin
+  for r in select tgname from pg_trigger
+           where tgrelid = 'public.profiles'::regclass and not tgisinternal
+  loop
+    execute format('drop trigger if exists %I on public.profiles', r.tgname);
+  end loop;
+end $$;
+
 -- ---------- 1. Migrar los nombres de rol ----------
 update public.profiles set role = 'administrador' where role = 'admin';
 update public.profiles set role = 'especialista'  where role = 'lector' or role is null;
