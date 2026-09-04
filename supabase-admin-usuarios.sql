@@ -29,6 +29,11 @@ begin
   end loop;
 end $$;
 
+-- ---------- 0b. Quitar el check constraint previo sobre role ----------
+-- (validaba solo los valores viejos 'admin'/'lector'; se reemplaza al
+--  final del script por uno que valida los nuevos 'administrador'/'especialista')
+alter table public.profiles drop constraint if exists profiles_role_valido;
+
 -- ---------- 1. Migrar los nombres de rol ----------
 update public.profiles set role = 'administrador' where role = 'admin';
 update public.profiles set role = 'especialista'  where role = 'lector' or role is null;
@@ -87,6 +92,10 @@ end;$$;
 drop trigger if exists profiles_guard_trg on public.profiles;
 create trigger profiles_guard_trg before update or delete on public.profiles
   for each row execute function public.profiles_guard();
+
+-- Restablece la validacion de valores, ahora con los nombres nuevos
+alter table public.profiles add constraint profiles_role_valido
+  check (role in ('administrador','especialista'));
 
 -- ---------- 5. "Normativa base" queda reservada a administradores ----------
 -- El especialista solo debe ver "Normativos OPR" (política ya existente
