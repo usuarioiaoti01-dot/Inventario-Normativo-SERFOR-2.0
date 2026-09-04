@@ -1,4 +1,7 @@
-# Inventario Normativo SERFOR
+# Inventario Normativo SERFOR — Versión 2
+
+> Fork de [Inventario-Normativo-SERFOR](https://github.com/usuarioiaoti01-dot/Inventario-Normativo-SERFOR),
+> punto de partida para las mejoras de la versión 2.
 
 Aplicación web para consultar, buscar, descargar y ampliar la normativa
 institucional del **SERFOR** (Servicio Nacional Forestal y de Fauna Silvestre).
