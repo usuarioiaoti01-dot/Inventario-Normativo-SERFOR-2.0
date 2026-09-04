@@ -172,6 +172,18 @@
   .form-msg.err{background:var(--stop-bg);color:var(--stop)}
   .form-msg.ok{background:var(--ok-bg);color:var(--ok)}
   .noadmin{max-width:520px;margin:60px auto;text-align:center;color:var(--ink-soft)}
+
+  /* Administración de usuarios */
+  .users-wrap{max-width:820px;margin:0 auto}
+  .users-table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:.88rem}
+  .users-table th,.users-table td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line)}
+  .users-table th{background:var(--surface-2);font-size:.74rem;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-soft)}
+  .users-table tr:last-child td{border-bottom:0}
+  .users-table select{padding:6px 8px;border:1px solid var(--line-strong);border-radius:6px;background:var(--bg);color:var(--ink);font-family:inherit;font-size:.84rem}
+  .badge-pend{background:var(--warn-bg);color:var(--warn);font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:6px}
+  .btn.danger{background:transparent;color:var(--stop);border:1px solid var(--stop)}
+  .btn.danger:hover{background:var(--stop-bg)}
+  .btn.sm{padding:6px 10px;font-size:.8rem}
 </style>
 </head>
 <body>
@@ -206,6 +218,26 @@
   </form>
 </div>
 
+<!-- ===== Pantalla: cambio de clave obligatorio (primer acceso) ===== -->
+<div id="pwScreen" class="auth-screen" hidden>
+  <form class="auth-card" id="pwForm">
+    <div class="seal">SF</div>
+    <h1>Cambia tu contraseña</h1>
+    <p class="subt">Primer acceso</p>
+    <div id="pwMsg"></div>
+    <p style="font-size:.84rem;color:var(--ink-soft);margin:0 0 16px">Por seguridad, debes reemplazar la contraseña temporal que te asignó el administrador antes de continuar.</p>
+    <div class="field">
+      <label for="pwNueva">Nueva contraseña</label>
+      <input id="pwNueva" type="password" autocomplete="new-password" required minlength="8" placeholder="Mínimo 8 caracteres">
+    </div>
+    <div class="field">
+      <label for="pwConfirma">Confirmar contraseña</label>
+      <input id="pwConfirma" type="password" autocomplete="new-password" required minlength="8">
+    </div>
+    <button class="btn block" id="pwBtn" type="submit">Guardar y continuar</button>
+  </form>
+</div>
+
 <!-- ===== Aplicación ===== -->
 <div id="app" hidden>
   <header class="top">
@@ -217,10 +249,11 @@
     <nav class="navtabs">
       <button id="navInv" class="on" onclick="showView('inv')">Inventario</button>
       <button id="navNew" onclick="showView('new')" hidden>Nuevos registros</button>
+      <button id="navAdmin" onclick="showView('admin')" hidden>Administración</button>
     </nav>
     <div class="top-spacer"></div>
     <div class="userbox">
-      <span class="role" id="roleTag">lector</span>
+      <span class="role" id="roleTag">especialista</span>
       <span id="userEmail"></span>
     </div>
     <button class="icon-btn" id="themeBtn" title="Cambiar tema">◐</button>
@@ -326,7 +359,48 @@
       </div>
       <div id="noAdmin" class="noadmin" hidden>
         <h2>Solo administradores</h2>
-        <p>Tu cuenta tiene rol de <b>lector</b>. Para agregar documentos, solicita permisos de administrador a la OTI.</p>
+        <p>Tu cuenta tiene rol de <b>especialista</b>. Para agregar documentos, solicita permisos de administrador a la OTI.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vista: Administración de usuarios (solo administrador) -->
+  <div id="viewAdmin" class="view" hidden>
+    <div class="form-view">
+      <div class="users-wrap">
+        <div class="form-card" style="margin-bottom:20px">
+          <h2>Agregar usuario</h2>
+          <p class="hint">Crea la cuenta con una contraseña temporal. Comunícasela al usuario por un canal seguro: se le pedirá cambiarla al ingresar por primera vez.</p>
+          <form id="userForm">
+            <div class="form-grid">
+              <div class="field full">
+                <label for="uNombre">Nombre completo</label>
+                <input id="uNombre" required placeholder="Ej: Juana Pérez Ramos">
+              </div>
+              <div class="field">
+                <label for="uCorreo">Correo institucional *</label>
+                <input id="uCorreo" type="email" required placeholder="usuario@serfor.gob.pe">
+              </div>
+              <div class="field">
+                <label for="uRol">Perfil *</label>
+                <select id="uRol" required>
+                  <option value="especialista">Especialista</option>
+                  <option value="administrador">Administrador</option>
+                </select>
+              </div>
+            </div>
+            <div id="userMsg"></div>
+            <div style="margin-top:18px">
+              <button class="btn" id="userBtn" type="submit">Crear cuenta</button>
+            </div>
+          </form>
+        </div>
+
+        <h2 style="font-size:1.02rem;margin:0 0 12px">Cuentas de acceso</h2>
+        <table class="users-table">
+          <thead><tr><th>Nombre</th><th>Correo</th><th>Perfil</th><th></th></tr></thead>
+          <tbody id="usersBody"><tr><td colspan="4">Cargando…</td></tr></tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -394,7 +468,7 @@
     sb.auth.getSession().then(({data})=>{ data.session ? enterApp(data.session) : show('loginScreen'); });
     sb.auth.onAuthStateChange((_e,session)=>{ session ? enterApp(session) : show('loginScreen'); });
   }
-  function show(id){ ['setupScreen','loginScreen','app'].forEach(x=>document.getElementById(x).hidden = (x!==id)); }
+  function show(id){ ['setupScreen','loginScreen','pwScreen','app'].forEach(x=>document.getElementById(x).hidden = (x!==id)); }
 
   // ---------- Login ----------
   document.getElementById('loginForm').addEventListener('submit', async e=>{
@@ -411,16 +485,35 @@
 
   document.getElementById('logoutBtn').onclick = async ()=>{ await sb.auth.signOut(); };
 
+  // ---------- Cambio de contraseña obligatorio (primer acceso) ----------
+  document.getElementById('pwForm').addEventListener('submit', async e=>{
+    e.preventDefault();
+    const btn = document.getElementById('pwBtn'); const msg = document.getElementById('pwMsg');
+    const nueva = document.getElementById('pwNueva').value, confirma = document.getElementById('pwConfirma').value;
+    if(nueva !== confirma){ msg.innerHTML = `<div class="auth-msg err">Las contraseñas no coinciden.</div>`; return; }
+    btn.disabled = true; btn.textContent = 'Guardando…'; msg.innerHTML = '';
+    const { error: errPw } = await sb.auth.updateUser({ password: nueva });
+    if(errPw){ msg.innerHTML = `<div class="auth-msg err">${esc(errPw.message)}</div>`; btn.disabled=false; btn.textContent='Guardar y continuar'; return; }
+    await sb.from('profiles').update({ must_change_password:false }).eq('id', currentUser.id);
+    await mostrarApp();
+  });
+
   // ---------- Entrar a la app ----------
   async function enterApp(session){
     currentUser = session.user;
     document.getElementById('userEmail').textContent = currentUser.email;
+    const { data: prof } = await sb.from('profiles').select('role,must_change_password').eq('id', currentUser.id).single();
+    isAdmin = prof && prof.role === 'administrador';
+    if(prof && prof.must_change_password){ show('pwScreen'); return; }
+    await mostrarApp();
+  }
+
+  // Muestra la aplicación ya con el rol resuelto (tras login o tras cambiar la clave)
+  async function mostrarApp(){
     show('app');
-    // rol
-    const { data: prof } = await sb.from('profiles').select('role').eq('id', currentUser.id).single();
-    isAdmin = prof && prof.role === 'admin';
-    document.getElementById('roleTag').textContent = isAdmin ? 'admin' : 'lector';
+    document.getElementById('roleTag').textContent = isAdmin ? 'Administrador' : 'Especialista';
     document.getElementById('navNew').hidden = !isAdmin;
+    document.getElementById('navAdmin').hidden = !isAdmin;
     document.getElementById('adminForm').hidden = !isAdmin;
     document.getElementById('noAdmin').hidden = isAdmin;
     await loadDocs();
@@ -434,7 +527,9 @@
     const pane = document.getElementById('listPane');
     pane.innerHTML = `<div class="empty">Cargando documentos…</div>`;
 
-    const res = await Promise.all(FUENTES.map(f =>
+    // El especialista solo tiene acceso a "Normativos OPR" (ver supabase-admin-usuarios.sql)
+    const fuentesRol = isAdmin ? FUENTES : FUENTES.filter(f=>f.tabla==='normativos_opr');
+    const res = await Promise.all(fuentesRol.map(f =>
       sb.from(f.tabla).select('*').then(r => ({ f, ...r }))
     ));
 
@@ -608,12 +703,73 @@
 
   // ---------- Navegación entre vistas ----------
   function showView(v){
-    const inv = v==='inv';
-    document.getElementById('viewInv').hidden = !inv;
-    document.getElementById('viewNew').hidden = inv;
-    document.getElementById('navInv').classList.toggle('on', inv);
-    document.getElementById('navNew').classList.toggle('on', !inv);
+    document.getElementById('viewInv').hidden = v!=='inv';
+    document.getElementById('viewNew').hidden = v!=='new';
+    document.getElementById('viewAdmin').hidden = v!=='admin';
+    document.getElementById('navInv').classList.toggle('on', v==='inv');
+    document.getElementById('navNew').classList.toggle('on', v==='new');
+    document.getElementById('navAdmin').classList.toggle('on', v==='admin');
+    if(v==='admin' && isAdmin) cargarUsuarios();
   }
+
+  // ---------- Administración de usuarios ----------
+  const ETIQ_ROL = { administrador:'Administrador', especialista:'Especialista' };
+
+  async function cargarUsuarios(){
+    const body = document.getElementById('usersBody');
+    body.innerHTML = `<tr><td colspan="4">Cargando…</td></tr>`;
+    const { data, error } = await sb.from('profiles').select('id,nombre,email,role,must_change_password').order('email');
+    if(error){ body.innerHTML = `<tr><td colspan="4">Error al cargar: ${esc(error.message)}</td></tr>`; return; }
+    if(!data.length){ body.innerHTML = `<tr><td colspan="4">No hay cuentas registradas.</td></tr>`; return; }
+    body.innerHTML = data.map(u => `
+      <tr>
+        <td>${esc(u.nombre||'—')}</td>
+        <td>${esc(u.email)}${u.must_change_password?'<span class="badge-pend">Clave pendiente</span>':''}</td>
+        <td>
+          <select onchange="cambiarRol('${u.id}', this.value, '${esc(u.email)}')" ${u.id===currentUser.id?'disabled title="No puedes cambiar tu propio rol desde aquí"':''}>
+            ${Object.entries(ETIQ_ROL).map(([v,t])=>`<option value="${v}" ${u.role===v?'selected':''}>${t}</option>`).join('')}
+          </select>
+        </td>
+        <td>
+          <button class="btn danger sm" ${u.id===currentUser.id?'disabled title="No puedes eliminar tu propia cuenta"':''} onclick="eliminarUsuario('${u.id}','${esc(u.email)}')">Eliminar</button>
+        </td>
+      </tr>`).join('');
+  }
+
+  async function cambiarRol(id, rol, email){
+    if(!confirm(`¿Cambiar el perfil de ${email} a "${ETIQ_ROL[rol]}"?`)) { cargarUsuarios(); return; }
+    const { error } = await sb.from('profiles').update({ role: rol }).eq('id', id);
+    if(error) alert('No se pudo cambiar el rol: ' + error.message);
+    cargarUsuarios();
+  }
+
+  async function eliminarUsuario(id, email){
+    if(!confirm(`¿Eliminar definitivamente la cuenta de ${email}? Esta acción no se puede deshacer.`)) return;
+    const { data, error } = await sb.functions.invoke('admin-usuarios', { body:{ accion:'eliminar', id } });
+    if(error || data?.error){ alert('No se pudo eliminar: ' + (data?.error || error.message)); return; }
+    cargarUsuarios();
+  }
+
+  document.getElementById('userForm').addEventListener('submit', async e=>{
+    e.preventDefault();
+    const btn = document.getElementById('userBtn'); const msg = document.getElementById('userMsg');
+    btn.disabled = true; btn.textContent = 'Creando…'; msg.innerHTML = '';
+    const body = {
+      accion: 'crear',
+      nombre: document.getElementById('uNombre').value.trim(),
+      correo: document.getElementById('uCorreo').value.trim(),
+      rol: document.getElementById('uRol').value,
+    };
+    const { data, error } = await sb.functions.invoke('admin-usuarios', { body });
+    btn.disabled = false; btn.textContent = 'Crear cuenta';
+    if(error || data?.error){
+      msg.innerHTML = `<div class="form-msg err">${esc(data?.error || error.message)}</div>`;
+      return;
+    }
+    msg.innerHTML = `<div class="form-msg ok">Cuenta creada. Contraseña temporal (cópiala y entrégala por un canal seguro; no se volverá a mostrar):<br><b style="font-size:1rem;letter-spacing:.03em">${esc(data.claveTemporal)}</b></div>`;
+    document.getElementById('userForm').reset();
+    cargarUsuarios();
+  });
 
   // ---------- Asistente IA flotante ----------
   function toggleChat(){

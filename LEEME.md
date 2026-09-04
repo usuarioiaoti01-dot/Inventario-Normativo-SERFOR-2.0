@@ -58,6 +58,16 @@ Cómo funciona una vez conectado:
    update public.profiles set role = 'admin'
    where email = 'adm-claude@serfor.gob.pe';
    ```
+3. Ahora instala el **módulo de administración de usuarios**: en **SQL Editor**,
+   pega `supabase-admin-usuarios.sql` y pulsa **Run** (renombra los roles a
+   `administrador`/`especialista` — tu cuenta recién creada queda como
+   `administrador` — y activa el resto de reglas descritas en
+   [Dar acceso a más usuarios](#dar-acceso-a-más-usuarios--módulo-de-administración)).
+   Luego despliega la función `admin-usuarios` (mismo paso que la función
+   `preguntar`, ver más abajo):
+   ```powershell
+   supabase functions deploy admin-usuarios
+   ```
 
 ### Paso 5 — Subir los 123 documentos actuales
 En PowerShell, dentro de esta carpeta (requiere **Node 18+**):
@@ -168,14 +178,39 @@ solo se muestra si esa tabla tiene la columna.
 
 ---
 
-### Dar acceso a más usuarios (compartir)
-1. Publica la página (ver abajo) y comparte la URL.
-2. Crea la cuenta de cada persona en **Authentication → Users → Add user**
-   (o activa invitaciones por correo en Supabase).
-3. Por defecto entran como **lector**. Para hacer a alguien administrador:
-   ```sql
-   update public.profiles set role='admin' where email='persona@serfor.gob.pe';
-   ```
+### Dar acceso a más usuarios — módulo de Administración
+
+Ya no hace falta entrar a Supabase para crear o quitar cuentas: la pestaña
+**Administración** (solo visible para administradores) lo hace desde la app.
+
+1. **Instalar el módulo (una sola vez):**
+   - **SQL Editor → New query**, pega `supabase-admin-usuarios.sql` y pulsa **Run**.
+     Renombra los roles (`admin`→`administrador`, `lector`→`especialista`), agrega
+     el aviso de "cambiar contraseña en el primer acceso" y restringe **Normativa
+     base** solo a administradores (el especialista solo ve **Normativos OPR**).
+   - Despliega la función que crea/elimina cuentas (necesita la clave secreta
+     `service_role`, que nunca debe estar en el navegador):
+     ```powershell
+     supabase functions deploy admin-usuarios
+     ```
+     (mismo `supabase login` / `supabase link` que ya usas para la función `preguntar`).
+
+2. **Perfiles disponibles:**
+   | Perfil | Puede |
+   |---|---|
+   | **Administrador** | Todo: agregar/eliminar usuarios, cambiar el perfil de alguien, subir documentos, ver **Normativa base** y **Normativos OPR** |
+   | **Especialista** | Navegar, buscar, ver y descargar documentos — solo de **Normativos OPR** |
+
+3. **Crear una cuenta:** pestaña Administración → formulario "Agregar usuario"
+   (nombre, correo, perfil). La app genera una contraseña temporal que se
+   muestra **una sola vez**: cópiala y entrégasela a la persona por un canal
+   seguro (no por correo en texto plano). Al ingresar por primera vez, la
+   aplicación le pedirá cambiarla antes de poder usar el resto de la app.
+
+4. **Cambiar de perfil o eliminar:** desde la misma tabla, con el selector de
+   perfil o el botón **Eliminar** de cada fila. No puedes cambiar tu propio
+   perfil ni eliminar tu propia cuenta desde ahí (evita quedarte fuera por
+   accidente), y el sistema no permite quitar al último administrador.
 
 ---
 
